@@ -7,9 +7,9 @@ on:
  
 jobs:
  
-  # -------------------------------
-  # 1. BUILD STAGE (GitHub Hosted)
-  # -------------------------------
+  # -----------------------------------
+  # 1. BUILD (GitHub Hosted Runner)
+  # -----------------------------------
   build:
     name: Build Application
     runs-on: ubuntu-latest
@@ -25,8 +25,9 @@ jobs:
       - name: Build Completed
         run: echo "Build successful"
  
+ 
   # -----------------------------------
-  # 2. DATABASE DEPLOY (Self Hosted)
+  # 2. DATABASE DEPLOY (Self-Hosted - Windows)
   # -----------------------------------
   deploy-db:
     name: Deploy Database Changes
@@ -38,16 +39,26 @@ jobs:
         uses: actions/checkout@v4
  
       - name: Run SQL Script (Insert Data)
+        shell: cmd
         run: |
-          /opt/mssql-tools/bin/sqlcmd \
-          -S ${{ secrets.DB_SERVER }} \
-          -d ${{ secrets.DB_NAME }} \
-          -U ${{ secrets.DB_USER }} \
-          -P ${{ secrets.DB_PASSWORD }} \
-          -i database/insert_data.sql
+          echo Starting SQL Execution...
+ 
+          sqlcmd -S %DB_SERVER% ^
+                 -d %DB_NAME% ^
+                 -U %DB_USER% ^
+                 -P %DB_PASSWORD% ^
+                 -i database\insert_data.sql
+ 
+          echo SQL Execution Completed
+        env:
+          DB_SERVER: ${{ secrets.DB_SERVER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+ 
  
   # -----------------------------------
-  # 3. VERIFY DATA
+  # 3. VERIFY DATA (Self-Hosted)
   # -----------------------------------
   verify-db:
     name: Verify Database Changes
@@ -55,17 +66,23 @@ jobs:
     needs: deploy-db
  
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
- 
       - name: Verify Inserted Data
+        shell: cmd
         run: |
-          /opt/mssql-tools/bin/sqlcmd \
-          -S ${{ secrets.DB_SERVER }} \
-          -d ${{ secrets.DB_NAME }} \
-          -U ${{ secrets.DB_USER }} \
-          -P ${{ secrets.DB_PASSWORD }} \
-          -Q "SELECT * FROM [dbo].[DevOps_1]"
+          echo Verifying Data...
+ 
+          sqlcmd -S %DB_SERVER% ^
+                 -d %DB_NAME% ^
+                 -U %DB_USER% ^
+                 -P %DB_PASSWORD% ^
+                 -Q "SELECT * FROM [dbo].[DevOps_1]"
+ 
+        env:
+          DB_SERVER: ${{ secrets.DB_SERVER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+ 
  
   # -----------------------------------
   # 4. ROLLBACK (ONLY IF FAILURE)
@@ -77,14 +94,19 @@ jobs:
     if: failure()
  
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
- 
       - name: Run Rollback Script
+        shell: cmd
         run: |
-          /opt/mssql-tools/bin/sqlcmd \
-          -S ${{ secrets.DB_SERVER }} \
-          -d ${{ secrets.DB_NAME }} \
-          -U ${{ secrets.DB_USER }} \
-          -P ${{ secrets.DB_PASSWORD }} \
-          -i database/rollback.sql
+          echo Running Rollback...
+ 
+          sqlcmd -S %DB_SERVER% ^
+                 -d %DB_NAME% ^
+                 -U %DB_USER% ^
+                 -P %DB_PASSWORD% ^
+                 -i database\rollback.sql
+ 
+        env:
+          DB_SERVER: ${{ secrets.DB_SERVER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
