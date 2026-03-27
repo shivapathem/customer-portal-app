@@ -3,7 +3,7 @@ name: Customer Portal Hybrid CI/CD Pipeline
 on:
   push:
     branches:
-      - main
+     - main
  
 jobs:
  
